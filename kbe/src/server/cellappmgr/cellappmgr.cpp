@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -588,6 +588,7 @@ void Cellappmgr::querySpaces(Network::Channel* pChannel, MemoryStream& s)
 			Space& space = iter2->second;
 			(*pBundle) << space.id();
 			(*pBundle) << space.getGeomappingPath();
+			(*pBundle) << space.getScriptModuleName();
 
 			Cells& cells = space.cells();
 			std::map<CELL_ID, Cell>& allCells = cells.cells();
@@ -614,9 +615,11 @@ void Cellappmgr::updateSpaceData(Network::Channel* pChannel, MemoryStream& s)
 	SPACE_ID spaceID;
 	bool delspace = false;
 	std::string geomappingPath;
+	std::string scriptModuleName;
 
 	s >> componentID;
 	s >> spaceID;
+	s >> scriptModuleName;
 	s >> delspace;
 	s >> geomappingPath;
 
@@ -626,7 +629,7 @@ void Cellappmgr::updateSpaceData(Network::Channel* pChannel, MemoryStream& s)
 
 	Cellapp& cellappref = iter->second;
 
-	cellappref.spaces().updateSpaceData(spaceID, geomappingPath, delspace);
+	cellappref.spaces().updateSpaceData(spaceID, scriptModuleName, geomappingPath, delspace);
 }
 
 //-------------------------------------------------------------------------------------

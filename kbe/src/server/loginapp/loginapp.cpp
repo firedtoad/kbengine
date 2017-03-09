@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -1204,7 +1204,7 @@ void Loginapp::onLoginAccountQueryBaseappAddrFromBaseappmgr(Network::Channel* pC
 	
 	if(addr.size() == 0)
 	{
-		ERROR_MSG(fmt::format("Loginapp::onLoginAccountQueryBaseappAddrFromBaseappmgr:accountName={}, not found baseapp.\n", 
+		ERROR_MSG(fmt::format("Loginapp::onLoginAccountQueryBaseappAddrFromBaseappmgr:accountName={}, not found baseapp, Please check the baseappmgr errorlog!\n", 
 			loginName));
 		
 		std::string datas;

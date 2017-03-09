@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -177,16 +177,16 @@ void Entity::onRemoteMethodCall(Network::Channel* pChannel, MemoryStream& s)
 
 	if(pMethodDescription == NULL)
 	{
-		ERROR_MSG(fmt::format("Entity::onRemoteMethodCall: can't found method. utype={}, callerID:{}.\n", 
-			utype, id_));
+		ERROR_MSG(fmt::format("{2}::onRemoteMethodCall: can't found method. utype={0}, methodName=unknown, callerID:{1}.\n", 
+			utype, id_, this->scriptName()));
 
 		return;
 	}
 
 	if(g_debugEntity)
 	{
-		DEBUG_MSG(fmt::format("Entity::onRemoteMethodCall: entityID {}, methodType {}.\n", 
-				id_, utype));
+		DEBUG_MSG(fmt::format("{3}::onRemoteMethodCall: {0}, {3}::{1}(utype={2}).\n", 
+			id_, (pMethodDescription ? pMethodDescription->getName() : "unknown"), utype, this->scriptName()));
 	}
 
 	PyObject* pyFunc = PyObject_GetAttrString(this, const_cast<char*>
@@ -780,6 +780,20 @@ void Entity::callPropertysSetMethods()
 		Py_DECREF(pyOld);
 		SCRIPT_ERROR_CHECK();
 	}
+}
+
+//-------------------------------------------------------------------------------------
+void Entity::onTimer(ScriptID timerID, int useraAgs)
+{
+	SCOPED_PROFILE(ONTIMER_PROFILE);
+	
+	PyObject* pyResult = PyObject_CallMethod(this, const_cast<char*>("onTimer"),
+		const_cast<char*>("Ii"), timerID, useraAgs);
+
+	if (pyResult != NULL)
+		Py_DECREF(pyResult);
+	else
+		SCRIPT_ERROR_CHECK();
 }
 
 //-------------------------------------------------------------------------------------

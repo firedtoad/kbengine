@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -1274,9 +1274,16 @@ bool DBTaskQueryAccount::db_thread_process()
 			return false;
 		}
 
+		if(info.dbid == 0)
+		{
+			error_ = "dbid is 0";
+			return false;
+		}
+
 		if(info.dbid == 0 || info.flags != ACCOUNT_FLAG_NORMAL)
 		{
-			error_ = "dbid is 0 or flags != ACCOUNT_FLAG_NORMAL";
+			error_ = "flags != ACCOUNT_FLAG_NORMAL";
+			flags_ = info.flags;
 			return false;
 		}
 
@@ -1508,10 +1515,12 @@ bool DBTaskAccountLogin::db_thread_process()
 	info.dbid = 0;
 	info.flags = 0;
 	info.deadline = 0;
+
 	if(!pTable->queryAccount(pdbi_, accountName_, info))
 	{
 		flags_ = info.flags;
 		deadline_ = info.deadline;
+
 		if(ACCOUNT_TYPE(g_kbeSrvConfig.getLoginApp().account_type) != ACCOUNT_TYPE_NORMAL)
 		{
 			if (email_isvalid(accountName_.c_str()))
@@ -1551,8 +1560,14 @@ bool DBTaskAccountLogin::db_thread_process()
 		}
 	}
 
-	if(info.dbid == 0 || info.flags != ACCOUNT_FLAG_NORMAL)
+	if(info.dbid == 0)
 		return false;
+
+	if(info.flags != ACCOUNT_FLAG_NORMAL)
+	{
+		flags_ = info.flags;
+		return false;
+	}
 
 	if (needCheckPassword_ || Network::Address::NONE == g_kbeSrvConfig.interfacesAddr())
 	{

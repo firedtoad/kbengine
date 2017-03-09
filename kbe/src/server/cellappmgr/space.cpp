@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -28,7 +28,8 @@ namespace KBEngine{
 Space::Space() :
 spaceID_(0),
 cells_(),
-geomappingPath_()
+geomappingPath_(),
+scriptModuleName_()
 {
 }
 
@@ -41,6 +42,12 @@ Space::~Space()
 void Space::updateGeomappingPath(const std::string& geomappingPath)
 {
 	geomappingPath_ = geomappingPath;
+}
+
+//-------------------------------------------------------------------------------------
+void Space::updateScriptModuleName(const std::string& scriptModuleName)
+{
+	scriptModuleName_ = scriptModuleName;
 }
 
 //-------------------------------------------------------------------------------------

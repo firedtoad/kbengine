@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -75,9 +75,9 @@ void Resmgr::autoSetPaths()
 	std::string s = path;
 	size_t pos1;
 
-	pos1 = s.find("\\kbe\\bin\\");
-	if(pos1 == std::string::npos)
-		pos1 = s.find("/kbe/bin/");
+	strutil::kbe_replace(s, "\\", "/");
+	strutil::kbe_replace(s, "//", "/");
+	pos1 = s.find("/kbe/bin/");
 
 	if(pos1 == std::string::npos)
 		return;
