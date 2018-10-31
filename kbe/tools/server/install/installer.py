@@ -105,7 +105,6 @@ def help():
 	OUT_MSG("\tinstaller.py install: Install development environment (dependent, environment variables, etc.), From the KBE_ROOT search.")
 	OUT_MSG("\tinstaller.py install=localsrc : Install from local-disk(Source code), From the KBE_ROOT search.")
 	OUT_MSG("\tinstaller.py install=remotesrc : Install from github(Source code).")
-	OUT_MSG("\tinstaller.py install=remotebin : Install from sourceforge(Binary releases).")
 	OUT_MSG("\tinstaller.py install={xxx.zip, xxx.tar.gz} : Install .zip/.tar.gz file.")
 	OUT_MSG("")
 	
@@ -183,7 +182,7 @@ def findKBEngine(dir):
 	paths = []
 	for x in os.listdir(dir):
 		if "kbengine" in x:
-			if os.path.isfile(dir + x + "/kbe/res/server/kbengine_defs.xml"):
+			if os.path.isfile(dir + x + "/kbe/res/server/kbengine_defaults.xml"):
 				paths.append(dir + x + "/")
 	
 	return paths
@@ -372,7 +371,7 @@ def _checkKBEEnvironment(is_get_error):
 	paths = []
 
 	checkKBERes = [
-		"server/kbengine_defs.xml",
+		"server/kbengine_defaults.xml",
 		"scripts",
 	]
 	
@@ -677,7 +676,7 @@ def installMysql():
 
 	
 	while True:
-		getInput("The MySQL service installation is complete? [yes|no]")
+		getInput("The MySQL service installation is completed? [yes|no]")
 		
 		if not findMysqlService():
 			ERROR_MSG("-  not found MySQL service.")
@@ -797,7 +796,7 @@ def modifyKBEConfig():
 	global mysql_kbe_db_name
 	global kbe_res_path
 	
-	kbengine_defs = kbe_res_path + "server/kbengine_defs.xml"
+	kbengine_defs = kbe_res_path + "server/kbengine_defaults.xml"
 	INFO_MSG("Modified: %s" % kbengine_defs)
 	
 	if not os.path.isfile(kbengine_defs):
@@ -815,7 +814,7 @@ def modifyKBEConfig():
 		mysql_kbe_name = "kbe"
 
 	if len(mysql_kbe_password) == 0:
-		mysql_kbe_password = "kbe"
+		mysql_kbe_password = "pwd123456"
 		
 	if len(mysql_kbe_db_name) == 0:
 		mysql_kbe_db_name = "kbe"
@@ -974,7 +973,7 @@ def createDatabase():
                         
 			mysql_kbe_password = getInput("- password(Do not enter the default is \'kbe\')): ")
 			if len(mysql_kbe_password) == 0:
-				mysql_kbe_password = "kbe"
+				mysql_kbe_password = "pwd123456"
 
 			INFO_MSG('Create kbe-account: name=%s, password=%s successfully!' % (mysql_kbe_name, mysql_kbe_password))
             
@@ -1441,6 +1440,9 @@ def download_sources(release = True):
 			break
 
 def download_binary():
+	ERROR_MSG("Has been abandoned, Please use (installer.py install=remotesrc)!")
+	return
+
 	global _zip_kbengine_dirname
 	_zip_kbengine_dirname = ""
 	global _zip_kbengine_path

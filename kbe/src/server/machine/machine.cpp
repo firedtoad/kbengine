@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2017 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #include "machine.h"
@@ -61,6 +43,7 @@ Machine::Machine(Network::EventDispatcher& dispatcher,
 	localuids_()
 {
 	SystemInfo::getSingleton().getCPUPer();
+	KBEngine::Network::MessageHandlers::pMainMessageHandlers = &MachineInterface::messageHandlers;
 }
 
 //-------------------------------------------------------------------------------------
@@ -85,13 +68,13 @@ void Machine::onBroadcastInterface(Network::Channel* pChannel, int32 uid, std::s
 									uint64 extradata1, uint64 extradata2, uint64 extradata3, uint32 backRecvAddr, uint16 backRecvPort)
 {
 	// 先查询一下是否存在相同身份，如果是相同身份且不是一个进程我们需要告知对方启动非法
-	const Components::ComponentInfos* pinfos = Components::getSingleton().findComponent(componentID);
+	Components::ComponentInfos* pinfos = Components::getSingleton().findComponent(componentID);
 	if(pinfos && isGameServerComponentType((COMPONENT_TYPE)componentType) && checkComponentUsable(pinfos, false, true))
 	{
 		if(pinfos->pid != pid || pinfos->pIntAddr->ip != intaddr ||
 			username != pinfos->username || uid != pinfos->uid)
 		{
-			Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+			Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 
 			MachineInterface::onBroadcastInterfaceArgs25::staticAddToBundle((*pBundle), pinfos->uid,
 				pinfos->username, pinfos->componentType, pinfos->cid, componentIDEx, pinfos->globalOrderid, pinfos->groupOrderid, pinfos->gus,
@@ -123,17 +106,19 @@ void Machine::onBroadcastInterface(Network::Channel* pChannel, int32 uid, std::s
 	}
 
 	// 只记录本机启动的进程
-	if(this->networkInterface().intaddr().ip == intaddr ||
-				this->networkInterface().extaddr().ip == intaddr)
+	if(this->networkInterface().intTcpAddr().ip == intaddr ||
+				this->networkInterface().extTcpAddr().ip == intaddr)
 	{
 		pinfos = Components::getSingleton().findComponent((COMPONENT_TYPE)componentType, uid, componentID);
 		if(pinfos)
 		{
 			if(checkComponentUsable(pinfos, false, true))
 			{
-				WARNING_MSG(fmt::format("Machine::onBroadcastInterface: {} is already running, pid={}, uid={}!\n", 
-					COMPONENT_NAME_EX((COMPONENT_TYPE)componentType), pid, uid));
+				DEBUG_MSG(fmt::format("Machine::onBroadcastInterface: {} update, pid={}, uid={}, globalorderid={}, grouporderid={}!\n", 
+					COMPONENT_NAME_EX((COMPONENT_TYPE)componentType), pid, uid, globalorderid, grouporderid));
 
+				pinfos->globalOrderid = globalorderid;
+				pinfos->groupOrderid = grouporderid;
 				return;
 			}
 		}
@@ -141,7 +126,7 @@ void Machine::onBroadcastInterface(Network::Channel* pChannel, int32 uid, std::s
 		// 一台硬件上只能存在一个machine
 		if(componentType == MACHINE_TYPE)
 		{
-			WARNING_MSG("Machine::onBroadcastInterface: machine is already running!\n");
+			ERROR_MSG("Machine::onBroadcastInterface: A single computer cannot run multiple \"machine\" process!\n");
 			return;
 		}
 	
@@ -209,7 +194,7 @@ void Machine::onFindInterfaceAddr(Network::Channel* pChannel, int32 uid, std::st
 	Components::COMPONENTS::iterator iter = components.begin();
 
 	bool found = false;
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 
 	for(; iter != components.end(); )
 	{
@@ -228,8 +213,8 @@ void Machine::onFindInterfaceAddr(Network::Channel* pChannel, int32 uid, std::st
 
 		if(usable)
 		{
-			if(this->networkInterface().intaddr().ip == pinfos->pIntAddr->ip ||
-				this->networkInterface().extaddr().ip == pinfos->pIntAddr->ip)
+			if(this->networkInterface().intTcpAddr().ip == pinfos->pIntAddr->ip ||
+				this->networkInterface().extTcpAddr().ip == pinfos->pIntAddr->ip)
 			{
 				found = true;
 
@@ -318,7 +303,7 @@ void Machine::onQueryMachines(Network::Channel* pChannel, int32 uid, std::string
 		return;
 	}
 
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 
 	uint64 cidex = 0;
 	float cpu = SystemInfo::getSingleton().getCPUPer();
@@ -327,8 +312,8 @@ void Machine::onQueryMachines(Network::Channel* pChannel, int32 uid, std::string
 
 	MachineInterface::onBroadcastInterfaceArgs25::staticAddToBundle((*pBundle), getUserUID(), getUsername(),
 		g_componentType, g_componentID, cidex, g_componentGlobalOrder, g_componentGroupOrder, g_genuuid_sections,
-		networkInterface_.intaddr().ip, networkInterface_.intaddr().port,
-		networkInterface_.extaddr().ip, networkInterface_.extaddr().port, "", getProcessPID(),
+		networkInterface_.intTcpAddr().ip, networkInterface_.intTcpAddr().port,
+		networkInterface_.extTcpAddr().ip, networkInterface_.extTcpAddr().port, "", getProcessPID(),
 		cpu, float((totalusedmem * 1.0 / totalmem) * 100.0), (uint32)SystemInfo::getSingleton().getMemUsedByPID(), 0,
 		getProcessPID(), totalmem, totalusedmem, uint64(SystemInfo::getSingleton().getCPUPerByPID() * 100), 0, 0, 0);
 
@@ -362,7 +347,7 @@ void Machine::onQueryAllInterfaceInfos(Network::Channel* pChannel, int32 uid, st
 	}
 
 	{
-		Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+		Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 		
 		uint64 cidex = 0;
 		float cpu = SystemInfo::getSingleton().getCPUPer();
@@ -371,8 +356,8 @@ void Machine::onQueryAllInterfaceInfos(Network::Channel* pChannel, int32 uid, st
 
 		MachineInterface::onBroadcastInterfaceArgs25::staticAddToBundle((*pBundle), getUserUID(), getUsername(), 
 			g_componentType, g_componentID, cidex, g_componentGlobalOrder, g_componentGroupOrder, g_genuuid_sections,
-			networkInterface_.intaddr().ip, networkInterface_.intaddr().port,
-			networkInterface_.extaddr().ip, networkInterface_.extaddr().port, "", getProcessPID(),
+			networkInterface_.intTcpAddr().ip, networkInterface_.intTcpAddr().port,
+			networkInterface_.extTcpAddr().ip, networkInterface_.extTcpAddr().port, "", getProcessPID(),
 			cpu, float((totalusedmem * 1.0 / totalmem) * 100.0), (uint32)SystemInfo::getSingleton().getMemUsedByPID(), 0, 
 			getProcessPID(), totalmem, totalusedmem, uint64(SystemInfo::getSingleton().getCPUPerByPID() * 100), 0, 0, 0);
 
@@ -413,8 +398,8 @@ void Machine::onQueryAllInterfaceInfos(Network::Channel* pChannel, int32 uid, st
 
 			const Components::ComponentInfos* pinfos = &(*iter);
 			
-			bool islocal = this->networkInterface().intaddr().ip == pinfos->pIntAddr->ip ||
-					this->networkInterface().extaddr().ip == pinfos->pIntAddr->ip;
+			bool islocal = this->networkInterface().intTcpAddr().ip == pinfos->pIntAddr->ip ||
+					this->networkInterface().extTcpAddr().ip == pinfos->pIntAddr->ip;
 
 			bool usable = checkComponentUsable(pinfos, true, false);
 
@@ -422,7 +407,7 @@ void Machine::onQueryAllInterfaceInfos(Network::Channel* pChannel, int32 uid, st
 			{
 				if(islocal)
 				{
-					Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+					Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 					
 					MachineInterface::onBroadcastInterfaceArgs25::staticAddToBundle((*pBundle), pinfos->uid, 
 						pinfos->username, findComponentType, pinfos->cid, pinfos->cid, pinfos->globalOrderid, pinfos->groupOrderid, pinfos->gus,
@@ -483,6 +468,7 @@ bool Machine::findBroadcastInterface()
 	}
 	
 	sockaddr_in	sin;
+	memset(&sin, 0, sizeof(sin));
 
 	if(bhandler.receive(NULL, &sin))
 	{
@@ -535,7 +521,7 @@ bool Machine::initNetwork()
 	{
 		ERROR_MSG("Machine::initNetwork: Failed to determine default broadcast interface. "
 				"Make sure that your broadcast route is set correctly. "
-				"e.g. /sbin/ip route add broadcast 255.255.255.255 dev eth0\n" );
+				"e.g. /sbin/ip route add broadcast 255.255.255.255 dev eth0, eth0 is internalInterface!\n" );
 
 		return false;
 	}
@@ -682,7 +668,7 @@ void Machine::startserver(Network::Channel* pChannel, KBEngine::MemoryStream& s)
 	int16 gus = 0;
 	std::string KBE_ROOT, KBE_RES_PATH, KBE_BIN_PATH;
 
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 	bool success = true;
 
 	uint16 finderRecvPort = 0;
@@ -905,7 +891,7 @@ void Machine::stopserver(Network::Channel* pChannel, KBEngine::MemoryStream& s)
 			uid,  COMPONENT_NAME_EX(componentType), pChannel->c_str()));
 	}
 
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 	(*pBundle) << success;
 
 	if(finderRecvPort != 0)
@@ -1038,7 +1024,7 @@ void Machine::killserver(Network::Channel* pChannel, KBEngine::MemoryStream& s)
 			uid, COMPONENT_NAME_EX(componentType), pChannel->c_str()));
 	}
 
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 	(*pBundle) << success;
 
 	if (finderRecvPort != 0)

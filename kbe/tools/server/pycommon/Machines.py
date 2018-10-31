@@ -29,7 +29,7 @@ class ComponentInfo( object ):
 	def initFromStream( self, streamStr ):
 		"""
 		"""
-		self.entities = 0    # KBEngine.Entity或KBEngine.Base数量
+		self.entities = 0    # KBEngine.Entity数量
 		self.clients = 0     # 客户端数量
 		self.proxies = 0     # KBEngine.Proxy实例数量
 		self.consolePort = 0 # 控制台端口
@@ -95,8 +95,12 @@ class Machines:
 			uid = Define.getDefaultUID()
 		
 		if username is None:
-			username = Define.pwd.getpwuid( uid ).pw_name
-			
+			try:
+				username = Define.pwd.getpwuid( uid ).pw_name
+			except:
+				import getpass
+				username = getpass.getuser()
+
 		self.uid = uid
 		self.username = username
 		if type(self.username) is str:
